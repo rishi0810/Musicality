@@ -1,8 +1,13 @@
-# React + Vite
+Version 1 
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Musicality
 
-Currently, two official plugins are available:
+A music web app created with React, Tailwind, and API to integrate a seamless web app
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Features:
+
+1) Uses saavn.dev api to access rest endpoints for JioSaavn to fetch songs
+2) Various Albums on the home page from popular genres
+3) A song search results in both lyrics and more songs from the artist
+4) Includes all functionalities of a modern music player including next song, forwarding, previous song, pause/play and volume control
+5) Autoplay, due to which it automatically plays the next song on the fetched album
