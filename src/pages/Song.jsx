@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import Footer from "../layout/Footer";
 import Header from "../layout/Header";
-
+import axios from "axios";
 function Song({ homeAlbum }) {
   const placeholder_song_url =
     "https://developers.elementor.com/docs/assets/img/elementor-placeholder-image.png";
@@ -11,8 +11,8 @@ function Song({ homeAlbum }) {
   // States for song details
   const [pid, setpid] = useState("");
   const [songurl, setsongurl] = useState("");
-  const [name, setname] = useState("Song Name");
-  const [artist, setartist] = useState("Song Artist");
+  const [name, setname] = useState("");
+  const [artist, setartist] = useState("");
   const [imgurl, setimgurl] = useState(placeholder_song_url);
   const [lyrics, setlyrics] = useState("Lyrics....");
   const [artistid, setartistid] = useState("");
@@ -32,7 +32,7 @@ function Song({ homeAlbum }) {
       2,
       "0"
     )}`;
-  };  
+  };
 
   //Fetching the album from the home component
   useEffect(() => {
@@ -62,21 +62,26 @@ function Song({ homeAlbum }) {
       }
     };
 
-    const fetch_song_lyrics = async () => {
-      if (pid) {
-        const response = await fetch(
-          `https://saavn.dev/api/songs/${pid}/lyrics`
-        );
-        const api_data = await response.json();
+    fetch_song_url();
+  }, [pid]);
 
-        if (api_data) {
-          setlyrics(api_data.data.lyrics);
-        } else setlyrics("No lyrics available");
+  useEffect(() => {
+    const fetch_song_lyrics = async () => {
+      if (artist && name) {
+        const query = encodeURIComponent(`${name} ${artist}`);
+        const response = await axios.get(
+          `https://lrclib.net/api/search?q=${query}`
+        );
+        const items = response.data;
+        const best = items[0] || { plainLyrics: "No lyrics available" };
+        setlyrics(best.plainLyrics);
       }
     };
-    fetch_song_url();
+
     fetch_song_lyrics();
-  }, [pid, artist, name]);
+  }, [artist, name]);
+
+ 
 
   return (
     <>
@@ -116,78 +121,92 @@ function Song({ homeAlbum }) {
               {toggle ? (
                 <div
                   className="text-slate-300 max-h-[calc(100vh-150px)] overflow-y-auto text-left py-5 px-10"
-                  dangerouslySetInnerHTML={{ __html: lyrics }}
-                />
+                  style={{ whiteSpace: "pre-wrap" }}
+                >
+                  {lyrics}
+                </div>
               ) : (
                 <div className="flex flex-col gap-5 max-h-[calc(100vh-150px)] overflow-y-auto pb-20 px-5">
                   {album.map((song, index) => (
-                  <div
-                  key={index}
-                  className="flex py-2 px-5 justify-between hover:bg-zinc-900 hover:cursor-pointer items-center"
-                  onClick={() => {
-                    setpid(song.id);
-                  }}
-                >
-                  <div className="flex gap-4 min-w-[305px] items-center flex-1">
-                    <span className="text-slate-500 flex items-center w-6">{index + 1}</span>
-                    <img
-                      src={song.image[2].url}
-                      className="size-10 rounded"
-                      alt={song.name}
-                    />
-                    <h3 className="text-white font-bold truncate w-[200px]">
-                      {song.name
-                        .replace(/&amp;/g, "&")
-                        .replace(/&#039;/g, "'")
-                        .replace(/&quot;/g, '"')}
-                    </h3>
-                  </div>
-                  <h5 className="text-white w-[200px] text-left truncate flex-1">
-                    {song.artists.primary[0].name
-                      .replace(/&amp;/g, "&")
-                      .replace(/&#039;/g, "'")
-                      .replace(/&quot;/g, '"')}
-                  </h5>
-                  <h3 className="text-white w-16 text-right">{formatTime(song.duration)}</h3>
-                </div>
-                
+                    <div
+                      key={index}
+                      className="flex py-2 px-5 justify-between hover:bg-zinc-900 hover:cursor-pointer items-center"
+                      onClick={() => {
+                        setpid(song.id);
+                      }}
+                    >
+                      <div className="flex gap-4 min-w-[305px] items-center flex-1">
+                        <span className="text-slate-500 flex items-center w-6">
+                          {index + 1}
+                        </span>
+                        <img
+                          src={song.image[2].url}
+                          className="size-10 rounded"
+                          alt={song.name}
+                        />
+                        <h3 className="text-white font-bold truncate w-[200px]">
+                          {song.name
+                            .replace(/&amp;/g, "&")
+                            .replace(/&#039;/g, "'")
+                            .replace(/&quot;/g, '"')}
+                        </h3>
+                      </div>
+                      <h5 className="text-white w-[200px] text-left truncate flex-1">
+                        {song.artists.primary[0].name
+                          .replace(/&amp;/g, "&")
+                          .replace(/&#039;/g, "'")
+                          .replace(/&quot;/g, '"')}
+                      </h5>
+                      <h3 className="text-white w-16 text-right">
+                        {formatTime(song.duration)}
+                      </h3>
+                    </div>
                   ))}
                 </div>
               )}
             </div>
 
-            {pid? <>
-              <div className="flex flex-col gap-5 w-1/5 items-center bg-zinc-900 px-5 py-10 max-h-[calc(100vh-4rem)] overflow-y-auto">
-              <img
-                src={imgurl}
-                className="w-full rounded-md p-2 bg-zinc-900 ring ring-inset ring-blue-700 ring-opacity-40"
-                alt="Album Cover"
-              />
-              <div className="flex flex-col gap-1 p-2 w-full">
-                <h1 className="text-xl font-bold text-slate-200">
-                  {name
-                    .replace(/&amp;/g, "&")
-                    .replace(/&#039;/g, "'")
-                    .replace(/&quot;/g, '"')}
-                </h1>
-                <h4 className="text-md font-semibold text-slate-400">
-                  {artist
-                    .replace(/&amp;/g, "&")
-                    .replace(/&#039;/g, "'")
-                    .replace(/&quot;/g, '"')}
-                </h4>
-              </div>
-              <img
-                src={artistimgurl}
-                alt=""
-                className="rounded p-2 ring ring-inset ring-blue-700 ring-opacity-20"
-              />
-            </div>
-            </> : null}
+            {pid ? (
+              <>
+                <div className="flex flex-col gap-5 w-1/5 items-center bg-zinc-900 px-5 py-10 max-h-[calc(100vh-4rem)] overflow-y-auto">
+                  <img
+                    src={imgurl}
+                    className="w-full rounded-md p-2 bg-zinc-900 ring ring-inset ring-blue-700 ring-opacity-40"
+                    alt="Album Cover"
+                  />
+                  <div className="flex flex-col gap-1 p-2 w-full">
+                    <h1 className="text-xl font-bold text-slate-200">
+                      {name
+                        .replace(/&amp;/g, "&")
+                        .replace(/&#039;/g, "'")
+                        .replace(/&quot;/g, '"')}
+                    </h1>
+                    <h4 className="text-md font-semibold text-slate-400">
+                      {artist
+                        .replace(/&amp;/g, "&")
+                        .replace(/&#039;/g, "'")
+                        .replace(/&quot;/g, '"')}
+                    </h4>
+                  </div>
+                  <img
+                    src={artistimgurl}
+                    alt=""
+                    className="rounded p-2 ring ring-inset ring-blue-700 ring-opacity-20"
+                  />
+                </div>
+              </>
+            ) : null}
           </>
         ) : null}
       </div>
-      <Footer songurl={songurl} name={name} artist={artist} imgurl={imgurl} album={album} setpid={setpid}/>
+      <Footer
+        songurl={songurl}
+        name={name}
+        artist={artist}
+        imgurl={imgurl}
+        album={album}
+        setpid={setpid}
+      />
     </>
   );
 }
