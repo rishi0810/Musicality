@@ -37,14 +37,27 @@ function Home() {
     const fetchByLanguage = async (language) => {
       try {
     const base = import.meta.env.VITE_PROXY_PLAYLIST_URL || import.meta.env.VITE_PLAYLIST_URL || import.meta.env.PLAYLIST_URL || '';
-      const finalUrl = base.includes('?') ? `${base}` : `${base}`;
-      console.log(`Home: fetching playlists for language=${language} from`, finalUrl);
+      // build a final URL that includes the requested language.
+      let url = base || '';
+      if (url) {
+        if (/languages=[^&]*/.test(url)) {
+          // If the template already contains a languages= param, replace or append value
+          if (/languages=$/.test(url)) {
+            url = url + encodeURIComponent(language);
+          } else {
+            url = url.replace(/(languages=)[^&]*/, `$1${encodeURIComponent(language)}`);
+          }
+        } else {
+          url = url + (url.includes('?') ? '&' : '?') + `languages=${encodeURIComponent(language)}`;
+        }
+      }
+      console.log(`Home: fetching playlists for language=${language} from`, url || base);
         const headers = {
           Accept: 'application/json, text/plain, */*',
           'Accept-Language': 'en-US,en;q=0.9'
         };
 
-        const res = await axios.get(base, { params: { languages: language }, headers });
+        const res = await axios.get(url || base, { headers });
   console.log(`Home: response status for ${language}:`, res.status);
   const json = res.data || {};
   console.log(`Home: response data for ${language}:`, json); 
