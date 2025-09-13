@@ -1,17 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { Search } from "lucide-react";
-import { NavLink } from "react-router";
-import logo from "../assets/icon.png"
+import PropTypes from "prop-types";
 
-const Header = ({ setpid, render, setartistid, setchangealbum }) => {
+const Header = ({ setpid, render = false, setartistid, setchangealbum, setalbum }) => {
   const [searchresults, setsearchresults] = useState(false);
-  //States for dropdown search menu and input field
   const [results, setresults] = useState([]);
   const [data, setdata] = useState("");
   const dropdownRef = useRef(null);
 
-  //Handling searching of song according to input field
   const handleevent = (e) => {
     const newData = e.target.value;
     setdata(newData);
@@ -22,13 +19,15 @@ const Header = ({ setpid, render, setartistid, setchangealbum }) => {
       return;
     }
 
-    //Fetching song and song lyrics
     const fetch_song_url = async () => {
       const response = await fetch(
         `https://saavn.dev/api/search/songs?query=${newData}`
       );
       const api_data = await response.json();
-      setresults(api_data.data.results);
+      const filtered_results = api_data.data.results.filter(
+        (result) => result.name
+      );
+      setresults(filtered_results);
     };
 
     fetch_song_url();
@@ -37,10 +36,32 @@ const Header = ({ setpid, render, setartistid, setchangealbum }) => {
       setsearchresults(true);
     }
 
-    setchangealbum(true);
+    if (typeof setchangealbum === 'function') setchangealbum(true);
   };
 
-  //Handling removal of dropdown menu on clicking outside the menu
+  const getBestImage = (img) => {
+    if (!img) return '/logo.webp';
+    if (typeof img === 'string') return img;
+    if (Array.isArray(img)) {
+      for (let i = img.length - 1; i >= 0; i--) {
+        const it = img[i];
+        if (!it) continue;
+        if (typeof it === 'string') return it;
+        if (it.url) return it.url;
+      }
+    }
+    if (img.url) return img.url;
+    return '/logo.webp';
+  };
+
+Header.propTypes = {
+  setpid: PropTypes.func,
+  render: PropTypes.bool,
+  setartistid: PropTypes.func,
+  setchangealbum: PropTypes.func,
+  setalbum: PropTypes.func,
+};
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -48,7 +69,6 @@ const Header = ({ setpid, render, setartistid, setchangealbum }) => {
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    //Removal on unmount
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
@@ -56,95 +76,74 @@ const Header = ({ setpid, render, setartistid, setchangealbum }) => {
 
   return (
     <>
-      <header className="sticky top-0 bg-zinc-950 px-20 py-2 z-40 border-b border-zinc-600">
-        <div className="flex justify-between px-3 items-center">
-          <span className="flex gap-2">
-          <img src={logo} className="size-14"/>
-            <Link
-              to="/"
-              className="text-xl font-poppins font-bold text-slate-300 self-center"
-            >
-              Musicality
-            </Link>
-          </span>
+      <header className="sticky top-0 z-50">
+        <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-4 bg-gradient-to-b from-zinc-900/80 to-transparent backdrop-blur border-b border-zinc-800/60 rounded-b-xl">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <img src="/logo.webp" alt="logo" className="w-10 h-10 rounded-md" />
+            </div>
+            <Link to="/" className="text-lg font-medium text-white tracking-tight">Musicality</Link>
+          </div>
 
-          <div className="w-1/3 h-[40px] flex items-center">
+          <div className="flex-1 max-w-xl mx-4 h-[44px] flex items-center">
             {render ? (
-              <input
-                type="search"
-                placeholder="what're you feeling like today?..."
-                className="bg-zinc-900 placeholder:text-slate-400 placeholder:font-serif placeholder:opacity-60 py-2 px-5 text-slate-200 rounded-full w-full focus:outline focus:outline-blue-600 focus:outline-2"
-                onChange={handleevent}
-                value={data}
-              />
+              <div className="relative w-full">
+                <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-zinc-400">
+                  <Search className="w-4 h-4" />
+                </div>
+                <input
+                  type="search"
+                  placeholder="Search songs, artists..."
+                  className="pl-10 pr-4 py-2 w-full rounded-full bg-zinc-900/70 text-slate-200 placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-600/60"
+                  onChange={handleevent}
+                  value={data}
+                  aria-label="Search songs"
+                />
+              </div>
             ) : (
-              <>
-                <NavLink
-                  to={"/song"}
-                  className="px-3 py-2 rounded-full flex-1 bg-zinc-900 text-zinc-200 text-md flex items-center justify-center hover:cursor-text"
-                >
-                  <span className="flex gap-1 items-center text-slate-400 hover:text-white">
-                    <Search className="size-[18px]" />
-                    Search
-                  </span>
-                </NavLink>
-              </>
+              <NavLink to="/song" className="w-full h-11 flex items-center rounded-full bg-zinc-900/60 text-slate-200 hover:bg-zinc-900/70 px-4 gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-zinc-800/60">
+                  <Search className="w-4 h-4 text-zinc-400" />
+                </div>
+                <span className="text-sm text-zinc-300">Search</span>
+              </NavLink>
             )}
           </div>
 
-          <div className="flex gap-5">
-            <Link 
-            to={"https://www.linkedin.com/in/rishiraj2003/"}
-            className="text-lg  font-semibold text-slate-300 self-center hover:text-white rounded font-poppins">
-              Contact
-            </Link>
-            <Link 
-            to={"https://github.com/rishi0810"}
-            className="text-lg  font-semibold text-slate-300 self-center hover:text-white rounded font-poppins">
-              Github
-            </Link>
+          <nav className="hidden sm:flex items-center gap-4">
+            <a href="https://www.linkedin.com/in/rishiraj2003/" className="text-sm text-zinc-300 hover:text-white">Contact</a>
+            <a href="https://github.com/rishi0810" className="text-sm text-zinc-300 hover:text-white">Github</a>
+          </nav>
+          <div className="sm:hidden">
+            <button className="p-2 rounded-md bg-zinc-900/50">
+              <svg className="w-5 h-5 text-zinc-300" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
           </div>
         </div>
 
         {render && searchresults && (
-          <div
-            ref={dropdownRef}
-            className="absolute top-full left-1/2 transform -translate-x-1/2 w-[445px] bg-zinc-900 rounded p-1 shadow shadow-zinc-800 z-50"
-          >
-            {results.length > 0 && (
-              <div className="flex flex-col gap-3">
-                {results.slice(0, 5).map((result) => (
-                  <div
-                    key={result.id}
-                    className="flex gap-3 p-1 hover:bg-zinc-800 hover:cursor-pointer"
-                    onClick={() => {
-                      setpid(result.id);
-                      setsearchresults(false);
-                      setartistid(result.artists.primary[0].id);
-                    }}
-                  >
-                    <img
-                      src={result.image[2].url}
-                      className="size-16 rounded"
-                      alt={result.name}
-                    />
-                    <div className="flex flex-col justify-center">
-                      <h3 className="text-white text-md font-bold">
-                        {result.name
-                          .replace(/&amp;/g, "&")
-                          .replace(/&#039;/g, "'")
-                          .replace(/&quot;/g, '"')}
-                      </h3>
-                      <h5 className="text-white text-sm">
-                        {result.artists.primary[0].name
-                          .replace(/&amp;/g, "&")
-                          .replace(/&#039;/g, "'")
-                          .replace(/&quot;/g, '"')}
-                      </h5>
+          <div ref={dropdownRef} className="absolute left-1/2 transform -translate-x-1/2 mt-2 w-[445px] bg-zinc-900 rounded-lg p-2 shadow-2xl z-50">
+            {results.length > 0 ? (
+              <ul className="flex flex-col gap-2">
+                {results.slice(0, 6).map((result) => (
+                  <li key={result.id} className="flex items-center gap-3 p-2 rounded hover:bg-zinc-800 cursor-pointer" onClick={() => {
+                    // When user clicks a search result, replace the current album with the artist's songs
+                    if (typeof setalbum === 'function') setalbum([]);
+                    if (typeof setpid === 'function') setpid(result.id);
+                    setsearchresults(false);
+                    if (typeof setartistid === 'function') setartistid(result.artists.primary[0].id);
+                    if (typeof setchangealbum === 'function') setchangealbum(true);
+                  }}>
+                    <img src={getBestImage(result.image)} alt={result.name} className="w-12 h-12 rounded-md" />
+                    <div className="flex flex-col">
+                      <span className="text-sm text-white font-medium">{result.name.replace(/&amp;/g, '&')}</span>
+                      <span className="text-xs text-zinc-400">{result.artists.primary[0].name.replace(/&amp;/g, '&')}</span>
                     </div>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ul>
+            ) : (
+              <div className="text-zinc-400 px-4 py-2">No results</div>
             )}
           </div>
         )}
