@@ -5,8 +5,7 @@ import axios from "axios";
 const PlayerContext = createContext(null);
 
 export const PlayerProvider = ({ children }) => {
-  const placeholder_song_url =
-    "https://developers.elementor.com/docs/assets/img/elementor-placeholder-image.png";
+  const placeholder_song_url = '/music-logo.svg';
 
   const [pid, setPid] = useState("");
   const [songurl, setSongurl] = useState("");

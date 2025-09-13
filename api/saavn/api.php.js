@@ -36,13 +36,10 @@ export default async function handler(req, res) {
       if (!fetchOptions.headers['content-type']) fetchOptions.headers['content-type'] = req.headers['content-type'] || 'application/json';
     }
 
-    console.log('[saavn-proxy] targetUrl=', targetUrl);
     let upstream;
     try {
       upstream = await fetch(targetUrl, fetchOptions);
     } catch (fetchErr) {
-      // Log the error for Vercel diagnostics
-      console.error('[saavn-proxy] fetch error for', targetUrl, fetchErr);
       // Network-level error when contacting upstream
       res.statusCode = 502;
       res.setHeader('content-type', 'application/json');
