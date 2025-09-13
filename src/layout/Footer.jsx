@@ -157,9 +157,9 @@ function Footer() {
                   alt="Song cover"
                   className="w-10 h-10 rounded-full bg-zinc-900 object-cover"
                 />
-                <div className="truncate">
-                  <h4 className="text-white text-sm font-semibold truncate">{name.replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/&quot;/g, '"')}</h4>
-                  <h5 className="text-zinc-400 text-xs truncate">{artist.replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/&quot;/g, '"')}</h5>
+                <div className="flex flex-col min-w-0 max-w-[260px]">
+                  <h4 className="text-white text-sm font-semibold truncate">{(name || '').replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/&quot;/g, '"')}</h4>
+                  <h5 className="text-zinc-400 text-xs truncate">{(artist || '').replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/&quot;/g, '"')}</h5>
                 </div>
               </div>
             </>

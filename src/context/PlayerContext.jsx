@@ -1,7 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect } from "react";
 import axios from "axios";
-import PropTypes from "prop-types";
 
 const PlayerContext = createContext(null);
 
@@ -241,10 +240,6 @@ export const usePlayer = () => {
   const ctx = useContext(PlayerContext);
   if (!ctx) throw new Error("usePlayer must be used within PlayerProvider");
   return ctx;
-};
-
-PlayerProvider.propTypes = {
-  children: PropTypes.node.isRequired,
 };
 
 export default PlayerContext;

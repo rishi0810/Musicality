@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { Search } from "lucide-react";
-import PropTypes from "prop-types";
 
 const Header = ({ setpid, render = false, setartistid, setchangealbum, setalbum }) => {
   const [searchresults, setsearchresults] = useState(false);
@@ -54,13 +53,6 @@ const Header = ({ setpid, render = false, setartistid, setchangealbum, setalbum 
     return '/logo.webp';
   };
 
-Header.propTypes = {
-  setpid: PropTypes.func,
-  render: PropTypes.bool,
-  setartistid: PropTypes.func,
-  setchangealbum: PropTypes.func,
-  setalbum: PropTypes.func,
-};
 
   useEffect(() => {
     const handleClickOutside = (event) => {

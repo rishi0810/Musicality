@@ -1,4 +1,4 @@
-import PropTypes from 'prop-types';
+
 
 const LyricsDisplay = ({ lyrics }) => {
   return (
@@ -13,7 +13,3 @@ const LyricsDisplay = ({ lyrics }) => {
 };
 
 export default LyricsDisplay;
-
-LyricsDisplay.propTypes = {
-  lyrics: PropTypes.string
-};

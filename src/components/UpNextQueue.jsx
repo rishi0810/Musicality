@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import SongItem from './SongItem.jsx';
-import PropTypes from 'prop-types';
 import { usePlayer } from '../context/PlayerContext';
 
 const UpNextQueue = ({ album, setpid, formatTime, currentSong }) => {
@@ -63,9 +62,4 @@ const UpNextQueue = ({ album, setpid, formatTime, currentSong }) => {
 
 export default UpNextQueue;
 
-UpNextQueue.propTypes = {
-  album: PropTypes.arrayOf(PropTypes.object),
-  setpid: PropTypes.func,
-  formatTime: PropTypes.func,
-  currentSong: PropTypes.shape({ name: PropTypes.string }),
-};
+// PropTypes removed for build cleanup

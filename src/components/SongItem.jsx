@@ -1,4 +1,4 @@
-import PropTypes from 'prop-types';
+// PropTypes removed for build cleanup
 
 const SongItem = ({ song, setpid, formatTime, isActive }) => {
   const getBestImage = (img) => {
@@ -86,9 +86,4 @@ const SongItem = ({ song, setpid, formatTime, isActive }) => {
 
 export default SongItem;
 
-SongItem.propTypes = {
-  song: PropTypes.object.isRequired,
-  setpid: PropTypes.func.isRequired,
-  formatTime: PropTypes.func.isRequired,
-  isActive: PropTypes.bool
-};
+// PropTypes removed for build cleanup

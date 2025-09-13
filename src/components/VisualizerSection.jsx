@@ -1,4 +1,3 @@
-import PropTypes from 'prop-types';
 import { useEffect, useState, useMemo } from 'react';
 
 const VisualizerSection = ({ currentSong }) => {
@@ -107,11 +106,4 @@ const VisualizerSection = ({ currentSong }) => {
 
 export default VisualizerSection;
 
-VisualizerSection.propTypes = {
-  currentSong: PropTypes.shape({
-    cover: PropTypes.string,
-    name: PropTypes.string,
-    artist: PropTypes.string,
-    lyrics: PropTypes.string,
-  })
-};
+// PropTypes removed for build cleanup

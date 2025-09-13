@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import PropTypes from 'prop-types';
 import UpNextQueue from './UpNextQueue.jsx';
 import LyricsDisplay from './LyricsDisplay.jsx';
 
@@ -46,15 +45,4 @@ const QueueAndLyricsSection = ({ album, lyrics, setpid, formatTime, currentSong 
 
 export default QueueAndLyricsSection;
 
-QueueAndLyricsSection.propTypes = {
-  album: PropTypes.arrayOf(PropTypes.object),
-  lyrics: PropTypes.string,
-  setpid: PropTypes.func,
-  formatTime: PropTypes.func,
-  currentSong: PropTypes.shape({
-    name: PropTypes.string,
-    artist: PropTypes.string,
-    cover: PropTypes.string,
-    lyrics: PropTypes.string,
-  })
-};
+// PropTypes removed for build cleanup
