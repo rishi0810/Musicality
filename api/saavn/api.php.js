@@ -1,6 +1,6 @@
 export default async function handler(req, res) {
   try {
-    // Allow preflight from browsers (if your frontend calls the function directly)
+    // Always set CORS headers early so responses (including errors) are accessible from the browser
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -10,15 +10,14 @@ export default async function handler(req, res) {
     }
 
     // Use SAAVN_API_BASE_URL from environment to avoid hardcoding the upstream URL
-  const targetBase = (globalThis.process && globalThis.process.env && globalThis.process.env.SAAVN_API_BASE_URL) || undefined;
+    const targetBase = (globalThis.process && globalThis.process.env && globalThis.process.env.SAAVN_API_BASE_URL) || undefined;
     if (!targetBase) {
       res.statusCode = 500;
       res.setHeader('content-type', 'application/json');
-      res.end(JSON.stringify({ error: 'SAAVN_API_BASE_URL is not configured on the server' }));
-      return;
+      return res.end(JSON.stringify({ error: 'SAAVN_API_BASE_URL is not configured on the server' }));
     }
 
-    // req.url includes the path within the serverless function (e.g. '/api/saavn/api.php?__call=...')
+    // Build upstream URL using incoming query string
     const incoming = new URL(req.url, `http://${req.headers.host}`);
     const targetUrl = targetBase + (incoming.search || '');
 
@@ -27,46 +26,62 @@ export default async function handler(req, res) {
     if (req.headers['accept']) forwardHeaders['accept'] = req.headers['accept'];
     if (req.headers['user-agent']) forwardHeaders['user-agent'] = req.headers['user-agent'];
 
-    // Make request to JioSaavn server-side (no CORS needed)
     const fetchOptions = {
       method: req.method,
       headers: forwardHeaders,
     };
 
-    if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS') {
-      // Vercel/Node will have req.body parsed for common content-types depending on runtime config.
-      // If a raw body is needed, it can be streamed; here we'll forward JSON/string bodies when present.
-      if (req.body) {
-        fetchOptions.body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
-        if (!fetchOptions.headers['content-type']) fetchOptions.headers['content-type'] = req.headers['content-type'] || 'application/json';
-      }
+    if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'OPTIONS' && req.body) {
+      fetchOptions.body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+      if (!fetchOptions.headers['content-type']) fetchOptions.headers['content-type'] = req.headers['content-type'] || 'application/json';
     }
 
-    const upstream = await fetch(targetUrl, fetchOptions);
+    console.log('[saavn-proxy] targetUrl=', targetUrl);
+    let upstream;
+    try {
+      upstream = await fetch(targetUrl, fetchOptions);
+    } catch (fetchErr) {
+      // Log the error for Vercel diagnostics
+      console.error('[saavn-proxy] fetch error for', targetUrl, fetchErr);
+      // Network-level error when contacting upstream
+      res.statusCode = 502;
+      res.setHeader('content-type', 'application/json');
+      return res.end(JSON.stringify({ error: 'Upstream fetch failed', details: String(fetchErr && fetchErr.message ? fetchErr.message : fetchErr) }));
+    }
 
-    // Copy upstream status and headers (but avoid hop-by-hop headers)
+    // Propagate upstream status
     res.statusCode = upstream.status;
-    upstream.headers.forEach((val, key) => {
-      const lower = key.toLowerCase();
-      if (['transfer-encoding', 'connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailer', 'upgrade'].includes(lower)) return;
-      res.setHeader(key, val);
-    });
 
-    // Ensure the function response is accessible from browser when needed
-    if (!res.getHeader('Access-Control-Allow-Origin')) res.setHeader('Access-Control-Allow-Origin', '*');
+    // Forward only safe headers (content-type, cache-control) to the client
+    const ct = upstream.headers.get('content-type');
+    if (ct) res.setHeader('content-type', ct);
+    const cc = upstream.headers.get('cache-control');
+    if (cc) res.setHeader('cache-control', cc);
 
+    // Ensure CORS header is present
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    // Return body appropriately depending on content type
+    if (ct && (ct.startsWith('application/json') || ct.startsWith('text/'))) {
+      const text = await upstream.text();
+      return res.end(text);
+    }
+
+    // For binary responses
     const arrayBuffer = await upstream.arrayBuffer();
     const uint8 = new Uint8Array(arrayBuffer);
     if (typeof globalThis.Buffer !== 'undefined') {
-      res.end(globalThis.Buffer.from(uint8));
-    } else {
-      // Fallback: decode as text
-      const text = new TextDecoder().decode(uint8);
-      res.end(text);
+      return res.end(globalThis.Buffer.from(uint8));
     }
+
+    // Fallback: send decoded text
+    const fallbackText = new TextDecoder().decode(uint8);
+    return res.end(fallbackText);
   } catch (err) {
+    // Unexpected internal error
     res.statusCode = 500;
     res.setHeader('content-type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.end(JSON.stringify({ error: String(err && err.message ? err.message : err) }));
   }
 };
