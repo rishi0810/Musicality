@@ -21,10 +21,21 @@ export default async function handler(req, res) {
     const incoming = new URL(req.url, `http://${req.headers.host}`);
     const targetUrl = targetBase + (incoming.search || '');
 
-    // Forward minimal safe headers
-    const forwardHeaders = {};
-    if (req.headers['accept']) forwardHeaders['accept'] = req.headers['accept'];
-    if (req.headers['user-agent']) forwardHeaders['user-agent'] = req.headers['user-agent'];
+  // Forward critical headers required by JioSaavn
+  const forwardHeaders = {};
+  forwardHeaders['accept'] = req.headers['accept'] || 'application/json, text/plain, */*';
+  // Use referer expected by JioSaavn if not provided
+  forwardHeaders['referer'] = req.headers['referer'] || 'https://www.jiosaavn.com/featured-playlists';
+  forwardHeaders['user-agent'] = req.headers['user-agent'] || 'Mozilla/5.0 (compatible)';
+
+  // Cookie: prefer incoming cookies, fall back to SAAVN_API_COOKIE env var if present
+  const incomingCookie = req.headers['cookie'];
+  const fallbackCookie = (globalThis.process && globalThis.process.env && globalThis.process.env.SAAVN_API_COOKIE) || '';
+  const cookieToSend = incomingCookie && String(incomingCookie).trim() ? incomingCookie : (fallbackCookie && String(fallbackCookie).trim() ? fallbackCookie : '');
+  if (cookieToSend) forwardHeaders['cookie'] = cookieToSend;
+
+  // Set Host header explicitly for upstream
+  forwardHeaders['host'] = new URL(targetBase).host;
 
     const fetchOptions = {
       method: req.method,
