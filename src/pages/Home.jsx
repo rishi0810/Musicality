@@ -88,34 +88,35 @@ function Home() {
 
   const handlePlaylistClick = async (plId) => {
     try {
-  const template = import.meta.env.VITE_PROXY_GET_PLAYLIST_URL || import.meta.env.VITE_GET_PLAYLIST_URL || import.meta.env.GET_PLAYLIST_URL || '';
-      console.log('Home: raw playlist-details template:', template);
+      const template = import.meta.env.VITE_PROXY_GET_PLAYLIST_URL || import.meta.env.VITE_GET_PLAYLIST_URL || import.meta.env.GET_PLAYLIST_URL || '';
       let url = template;
       const encodedId = encodeURIComponent(String(plId || ''));
-      if (template.includes('$PLAYLIST_ID')) {
-        url = template.replace('$PLAYLIST_ID', encodedId);
-      } else if (template.includes('{PLAYLIST_ID}')) {
-        url = template.replace('{PLAYLIST_ID}', encodedId);
-      } else if (template.includes('__PLAYLIST_ID__')) {
-        url = template.replace('__PLAYLIST_ID__', encodedId);
-      } else if (template.includes('listid=')) {
-        // replace whatever follows listid= until &
-        url = template.replace(/(listid=)[^&]*/, `$1${encodedId}`);
+      if (template) {
+        if (template.includes('$PLAYLIST_ID')) {
+          url = template.replace('$PLAYLIST_ID', encodedId);
+        } else if (template.includes('{PLAYLIST_ID}')) {
+          url = template.replace('{PLAYLIST_ID}', encodedId);
+        } else if (template.includes('__PLAYLIST_ID__')) {
+          url = template.replace('__PLAYLIST_ID__', encodedId);
+        } else if (template.includes('listid=')) {
+          // replace whatever follows listid= until &
+          url = template.replace(/(listid=)[^&]*/, `$1${encodedId}`);
+        } else {
+          // append listid param
+          url = template + (template.includes('?') ? '&' : '?') + `listid=${encodedId}`;
+        }
       } else {
-        // append listid param
-        url = template + (template.includes('?') ? '&' : '?') + `listid=${encodedId}`;
+        // Fallback to serverless playlist-songs endpoint (keeps backend URL server-side)
+        url = `/api/playlist-songs?id=${encodedId}`;
       }
-      console.log('Home: fetching playlist details for', plId, 'using', url);
+
       const headers = {
         Accept: 'application/json, text/plain, */*',
         'Accept-Language': 'en-US,en;q=0.9'
       };
 
       const res = await axios.get(url, { headers });
-  console.log('Home: playlist details response status', res.status);
       const json = res.data || {};
-      console.log('Home: playlist details json keys', Object.keys(json));
-      console.log(json);
       // Defensive extraction of songs array
       let songs = [];
       if (json.error) {
