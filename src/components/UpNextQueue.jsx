@@ -3,7 +3,7 @@ import SongItem from './SongItem.jsx';
 import { usePlayer } from '../context/PlayerContext';
 
 const UpNextQueue = ({ album, setpid, formatTime, currentSong }) => {
-  const { artistid } = usePlayer();
+  const { artistid, pid } = usePlayer();
   const [moreByArtist, setMoreByArtist] = useState([]);
 
   useEffect(() => {
@@ -38,7 +38,7 @@ const UpNextQueue = ({ album, setpid, formatTime, currentSong }) => {
             song={song}
             setpid={setpid}
             formatTime={formatTime}
-            isActive={song.name === currentSong.name}
+            isActive={String(song.id) === String(pid) || String(song.id) === String(currentSong.id) || (song.name && currentSong.name && String(song.name) === String(currentSong.name))}
           />
         ))}
 
@@ -50,7 +50,7 @@ const UpNextQueue = ({ album, setpid, formatTime, currentSong }) => {
                 song={song}
                 setpid={setpid}
                 formatTime={formatTime}
-                isActive={song.name === currentSong.name}
+                isActive={String(song.id) === String(pid) || String(song.id) === String(currentSong.id) || (song.name && currentSong.name && String(song.name) === String(currentSong.name))}
               />
             ))}
           </div>

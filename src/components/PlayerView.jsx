@@ -15,6 +15,7 @@ const PlayerView = () => {
     setArtistid,
     setChangeAlbum,
     setAlbum,
+    pid,
   } = usePlayer();
 
   const formatTime = (time) => {
@@ -28,6 +29,7 @@ const PlayerView = () => {
   };
 
   const currentSong = {
+    id: pid,
     cover: imgurl,
     name: name,
     artist: artist,

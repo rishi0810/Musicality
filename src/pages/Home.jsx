@@ -5,7 +5,7 @@ import { usePlayer } from "../context/PlayerContext";
 import axios from 'axios';
 
 function Home() {
-  const { setAlbum, setPid } = usePlayer();
+  const { setAlbum, setPid, setArtistid, setChangeAlbum } = usePlayer();
   const [languagePlaylists, setLanguagePlaylists] = useState({});
   const navigate = useNavigate();
 
@@ -88,35 +88,28 @@ function Home() {
 
   const handlePlaylistClick = async (plId) => {
     try {
-      const template = import.meta.env.VITE_PROXY_GET_PLAYLIST_URL || import.meta.env.VITE_GET_PLAYLIST_URL || import.meta.env.GET_PLAYLIST_URL || '';
-      let url = template;
       const encodedId = encodeURIComponent(String(plId || ''));
-      if (template) {
-        if (template.includes('$PLAYLIST_ID')) {
-          url = template.replace('$PLAYLIST_ID', encodedId);
-        } else if (template.includes('{PLAYLIST_ID}')) {
-          url = template.replace('{PLAYLIST_ID}', encodedId);
-        } else if (template.includes('__PLAYLIST_ID__')) {
-          url = template.replace('__PLAYLIST_ID__', encodedId);
-        } else if (template.includes('listid=')) {
-          // replace whatever follows listid= until &
-          url = template.replace(/(listid=)[^&]*/, `$1${encodedId}`);
-        } else {
-          // append listid param
-          url = template + (template.includes('?') ? '&' : '?') + `listid=${encodedId}`;
-        }
-      } else {
-        // Fallback to serverless playlist-songs endpoint (keeps backend URL server-side)
-        url = `/api/playlist-songs?id=${encodedId}`;
+      // Prefer client-exposed VITE var; otherwise try serverless local proxy `/api/playlist-songs`.
+      // Note: `import.meta.env.VITE_PLAYLIST_SONGS_URL` exists only at build time.
+      const viteBase = import.meta.env.VITE_PLAYLIST_SONGS_URL || '';
+      const serverlessFallback = '/api/playlist-songs';
+      let base = viteBase || serverlessFallback;
+
+      // If viteBase is empty and serverless endpoint is not desired, ensure base exists
+      if (!base) {
+        console.error('No playlist backend configured (VITE_PLAYLIST_SONGS_URL or /api/playlist-songs)');
+        navigate('song');
+        return;
       }
 
-      const headers = {
-        Accept: 'application/json, text/plain, */*',
-        'Accept-Language': 'en-US,en;q=0.9'
-      };
-
-      const res = await axios.get(url, { headers });
-      const json = res.data || {};
+      const connector = base.includes('?') ? '&' : '?';
+      const url = `${base}${connector}id=${encodedId}`;
+      const headers = { Accept: 'application/json, text/plain, */*', 'Accept-Language': 'en-US,en;q=0.9' };
+      const res = await axios.get(url, { headers }).catch((e) => {
+        console.warn('Playlist fetch failed for', url, e && e.message);
+        return null;
+      });
+      const json = (res && res.data) || {};
       // Defensive extraction of songs array
       let songs = [];
       if (json.error) {
@@ -135,7 +128,7 @@ function Home() {
       }
 
       // set album songs in context (always an array)
-      setAlbum(songs);
+      setAlbum(Array.isArray(songs) ? songs : []);
       if (Array.isArray(songs) && songs.length > 0 && songs[0].id) {
         setPid(songs[0].id);
       } else {
@@ -210,7 +203,7 @@ function Home() {
 
   return (
     <>
-      <Header render={false} />
+  <Header render={true} setpid={setPid} setartistid={setArtistid} setchangealbum={setChangeAlbum} setalbum={setAlbum} />
       <main className="bg-zinc-950 min-h-screen w-full px-6 py-10">
         <div className="mx-auto max-w-7xl">
           <header className="flex items-center justify-between mb-10">

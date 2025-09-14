@@ -66,7 +66,7 @@ export const PlayerProvider = ({ children }) => {
 
   // If we found a song object from album, try to reuse its fields.
   // Only skip the remote song API fetch when the album song provides a download URL, a duration, and an image.
-        let needFetch = true;
+        // If we have an album item for this pid, apply its fields immediately
         if (song) {
           const possibleDownload = pickBestUrl(song.downloadUrl || song.download_url || (song.vlink ? [{ vlink: song.vlink }] : null)) || pickBestUrl((song.more_info && song.more_info.downloadUrl) || song.downloadUrl || (song.more_info && song.more_info.download_url));
           const possibleImage = pickBestUrl(song.image || song.images || (song.more_info && song.more_info.images) || song.imageUrl || song.image_url || (song.more_info && song.more_info.images));
@@ -77,40 +77,38 @@ export const PlayerProvider = ({ children }) => {
           if (song.name) setName(song.name);
           if (song.artists && song.artists.primary && song.artists.primary[0] && song.artists.primary[0].name) setArtist(song.artists.primary[0].name);
           if (song.artists && song.artists.primary && song.artists.primary[0]) setArtistid(song.artists.primary[0].id || '');
+        }
 
-          if (possibleDownload && (song.duration || song.duration_in_seconds || song.length) && possibleImage) {
-            needFetch = false;
+        // Always fetch the authoritative song metadata from saavn.dev for the selected pid.
+        // This ensures we get download URLs, duration, images and canonical artist info
+        // even if the album entry had partial data.
+        const response = await fetch(`https://saavn.dev/api/songs/${pid}`);
+        const api_data = await response.json();
+
+        // If requested, refresh the album based on the artist's songs
+        if (changealbum && artistid) {
+          try {
+            const albumresponse = await fetch(`https://saavn.dev/api/artists/${artistid}/songs`);
+            const album_json = await albumresponse.json();
+            const album_data = (album_json && album_json.data && album_json.data.songs) || album_json.data || [];
+            setAlbum(album_data);
+          } catch (e) {
+            console.warn('Failed to fetch artist songs for album update', e);
           }
         }
 
-        if (needFetch) {
-          const response = await fetch(`https://saavn.dev/api/songs/${pid}`);
-          const api_data = await response.json();
-
-          if (changealbum && artistid) {
-            try {
-              const albumresponse = await fetch(`https://saavn.dev/api/artists/${artistid}/songs`);
-              const album_json = await albumresponse.json();
-              const album_data = (album_json && album_json.data && album_json.data.songs) || album_json.data || [];
-              setAlbum(album_data);
-            } catch (e) {
-              console.warn('Failed to fetch artist songs for album update', e);
-            }
-          }
-
-          const maybeData = api_data && (api_data.data || api_data.song || api_data.songs) ;
-          const songObj = Array.isArray(maybeData) ? maybeData[0] : maybeData;
-          if (songObj) {
-            const download = pickBestUrl(songObj.downloadUrl || songObj.download_url || (songObj.vlink ? [{ vlink: songObj.vlink }] : null)) || pickBestUrl((songObj.more_info && songObj.more_info.downloadUrl) || songObj.downloadUrl || (songObj.more_info && songObj.more_info.download_url)) || null;
-            const image = pickBestUrl(songObj.image || songObj.images || (songObj.more_info && songObj.more_info.images) || songObj.imageUrl || songObj.image_url) || null;
-            if (download) setSongurl(download);
-            if (image) setImgurl(image);
-            if (songObj.duration) setDuration(Number(songObj.duration) || 0);
-            if (songObj.duration_in_seconds) setDuration(Number(songObj.duration_in_seconds) || 0);
-            if (songObj.name) setName(songObj.name);
-            if (songObj.artists && songObj.artists.primary && songObj.artists.primary[0] && songObj.artists.primary[0].name) setArtist(songObj.artists.primary[0].name);
-            if (songObj.artists && songObj.artists.primary && songObj.artists.primary[0]) setArtistid(songObj.artists.primary[0].id || '');
-          }
+        const maybeData = api_data && (api_data.data || api_data.song || api_data.songs) ;
+        const songObj = Array.isArray(maybeData) ? maybeData[0] : maybeData;
+        if (songObj) {
+          const download = pickBestUrl(songObj.downloadUrl || songObj.download_url || (songObj.vlink ? [{ vlink: songObj.vlink }] : null)) || pickBestUrl((songObj.more_info && songObj.more_info.downloadUrl) || songObj.downloadUrl || (songObj.more_info && songObj.more_info.download_url)) || null;
+          const image = pickBestUrl(songObj.image || songObj.images || (songObj.more_info && songObj.more_info.images) || songObj.imageUrl || songObj.image_url) || null;
+          if (download) setSongurl(download);
+          if (image) setImgurl(image);
+          if (songObj.duration) setDuration(Number(songObj.duration) || 0);
+          if (songObj.duration_in_seconds) setDuration(Number(songObj.duration_in_seconds) || 0);
+          if (songObj.name) setName(songObj.name);
+          if (songObj.artists && songObj.artists.primary && songObj.artists.primary[0] && songObj.artists.primary[0].name) setArtist(songObj.artists.primary[0].name);
+          if (songObj.artists && songObj.artists.primary && songObj.artists.primary[0]) setArtistid(songObj.artists.primary[0].id || '');
         }
       } catch (err) {
         console.error("Error fetching song:", err);

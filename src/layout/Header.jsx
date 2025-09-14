@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 
 const Header = ({ setpid, render = false, setartistid, setchangealbum, setalbum }) => {
@@ -7,6 +7,8 @@ const Header = ({ setpid, render = false, setartistid, setchangealbum, setalbum 
   const [results, setresults] = useState([]);
   const [data, setdata] = useState("");
   const dropdownRef = useRef(null);
+
+  const navigate = useNavigate();
 
   const handleevent = (e) => {
     const newData = e.target.value;
@@ -19,21 +21,56 @@ const Header = ({ setpid, render = false, setartistid, setchangealbum, setalbum 
     }
 
     const fetch_song_url = async () => {
-      const response = await fetch(
-        `https://saavn.dev/api/search/songs?query=${newData}`
-      );
-      const api_data = await response.json();
-      const filtered_results = api_data.data.results.filter(
-        (result) => result.name
-      );
-      setresults(filtered_results);
+      try {
+        // Mirror playlist priority: prefer a proxied/local endpoint first to avoid direct upstream calls in the browser
+        const proxyVar = import.meta.env.VITE_PROXY_SEARCH_SONGS_URL || '';
+        const viteVar = import.meta.env.VITE_SEARCH_SONGS_URL || '';
+        const serverVar = import.meta.env.SEARCH_SONGS_URL || '';
+        // Prefer proxy var -> vite var -> server env; if none provided, use the local saavn proxy/function
+        const baseEnv = proxyVar || viteVar || serverVar || '';
+        let url = '';
+        if (baseEnv) {
+          url = baseEnv || '';
+          // If the template already contains a query= param, replace or append value
+          if (/query=[^&]*/.test(url)) {
+            if (/query=$/.test(url)) {
+              url = url + encodeURIComponent(newData);
+            } else {
+              url = url.replace(/(query=)[^&]*/, `$1${encodeURIComponent(newData)}`);
+            }
+          } else {
+            url = url + (url.includes('?') ? '&' : '?') + `query=${encodeURIComponent(newData)}`;
+          }
+        } else {
+          // Fallback to the same dev/prod proxy used by playlists: /api/saavn/api.php with autocomplete call
+          url = `/api/saavn/api.php?__call=autocomplete.get&_format=json&_marker=0&cc=in&includeMetaTags=1&query=${encodeURIComponent(newData)}`;
+        }
+
+        const response = await fetch(url, { headers: { Accept: 'application/json' } });
+        const api_data = await response.json();
+
+        // New API returns an object with `songs.data` being the array of results
+        const rawResults = (api_data && api_data.songs && Array.isArray(api_data.songs.data)) ? api_data.songs.data : [];
+
+        // Normalize each result to the shape the rest of the UI expects (id, title/name, image, more_info)
+        const mapped = rawResults.map((r) => ({
+          id: r.id,
+          title: r.title,
+          name: r.title, // keep `name` for any old consumers
+          image: r.image,
+          more_info: r.more_info || {},
+        }));
+
+        setresults(mapped);
+        setsearchresults(mapped.length > 0);
+      } catch (err) {
+        console.warn('Search fetch failed', err && err.message);
+        setresults([]);
+        setsearchresults(false);
+      }
     };
 
     fetch_song_url();
-
-    if (results.length > 0) {
-      setsearchresults(true);
-    }
 
     if (typeof setchangealbum === 'function') setchangealbum(true);
   };
@@ -119,17 +156,19 @@ const Header = ({ setpid, render = false, setartistid, setchangealbum, setalbum 
               <ul className="flex flex-col gap-2">
                 {results.slice(0, 6).map((result) => (
                   <li key={result.id} className="flex items-center gap-3 p-2 rounded hover:bg-zinc-800 cursor-pointer" onClick={() => {
-                    // When user clicks a search result, replace the current album with the artist's songs
-                    if (typeof setalbum === 'function') setalbum([]);
-                    if (typeof setpid === 'function') setpid(result.id);
-                    setsearchresults(false);
-                    if (typeof setartistid === 'function') setartistid(result.artists.primary[0].id);
-                    if (typeof setchangealbum === 'function') setchangealbum(true);
-                  }}>
-                    <img src={getBestImage(result.image)} alt={result.name} className="w-12 h-12 rounded-md" />
+            // When user clicks a search result, replace the current album with the artist's songs
+                      if (typeof setalbum === 'function') setalbum([]);
+                      if (typeof setpid === 'function') setpid(result.id);
+                      setsearchresults(false);
+                      if (typeof setartistid === 'function') setartistid(result.more_info && result.more_info.primary_artists ? result.more_info.primary_artists : '');
+                      if (typeof setchangealbum === 'function') setchangealbum(true);
+                      // Navigate to the song page so PlayerView is shown (works from Home or anywhere)
+                      try { navigate('/song'); } catch { /* ignore */ }
+                    }}>
+                    <img src={getBestImage(result.image)} alt={result.title} className="w-12 h-12 rounded-md" />
                     <div className="flex flex-col">
-                      <span className="text-sm text-white font-medium">{result.name.replace(/&amp;/g, '&')}</span>
-                      <span className="text-xs text-zinc-400">{result.artists.primary[0].name.replace(/&amp;/g, '&')}</span>
+                      <span className="text-sm text-white font-medium">{(result.title || result.name || '').replace(/&amp;/g, '&')}</span>
+                      <span className="text-xs text-zinc-400">{(result.more_info && result.more_info.primary_artists) ? result.more_info.primary_artists.replace(/&amp;/g, '&') : ''}</span>
                     </div>
                   </li>
                 ))}
