@@ -145,7 +145,7 @@ function Footer() {
   return (
     <>
       <footer
-        className="fixed left-1/2 bottom-6 transform -translate-x-1/2 w-7/12 z-50 hidden md:flex items-center justify-center"
+        className="fixed left-1/2 bottom-2 transform -translate-x-1/2 w-7/12 z-50 hidden md:flex items-center justify-center"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <div className="w-full bg-zinc-900/60 backdrop-blur-md rounded-full shadow-xl px-4 py-2 flex items-center justify-between gap-3 border border-zinc-800">
