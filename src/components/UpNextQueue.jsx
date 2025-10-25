@@ -14,7 +14,7 @@ const UpNextQueue = ({ album, setpid, formatTime, currentSong }) => {
           setMoreByArtist([]);
           return;
         }
-        const res = await fetch(`https://saavn.dev/api/artists/${artistid}/songs`);
+        const res = await fetch(`https://saavn.sumit.co/api/artists/${artistid}/songs`);
         const json = await res.json();
         const songs = json.data?.songs || [];
         if (mounted) setMoreByArtist(songs);

@@ -118,7 +118,7 @@ The build artifacts will be stored in the `dist/` directory.
 - **VisualizerSection**: Album art and lyrics display
 
 ### API Integration
-- JioSaavn API via saavn.dev for song data
+- JioSaavn API via saavn.sumit.co for song data
 - Robust URL substitution and fallback handling
 - Local storage caching for playlists
 - Lyrics fetching from lrclib.net

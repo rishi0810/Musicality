@@ -79,16 +79,16 @@ export const PlayerProvider = ({ children }) => {
           if (song.artists && song.artists.primary && song.artists.primary[0]) setArtistid(song.artists.primary[0].id || '');
         }
 
-        // Always fetch the authoritative song metadata from saavn.dev for the selected pid.
+        // Always fetch the authoritative song metadata from saavn.sumit.co for the selected pid.
         // This ensures we get download URLs, duration, images and canonical artist info
         // even if the album entry had partial data.
-        const response = await fetch(`https://saavn.dev/api/songs/${pid}`);
+        const response = await fetch(`https://saavn.sumit.co/api/songs/${pid}`);
         const api_data = await response.json();
 
         // If requested, refresh the album based on the artist's songs
         if (changealbum && artistid) {
           try {
-            const albumresponse = await fetch(`https://saavn.dev/api/artists/${artistid}/songs`);
+            const albumresponse = await fetch(`https://saavn.sumit.co/api/artists/${artistid}/songs`);
             const album_json = await albumresponse.json();
             const album_data = (album_json && album_json.data && album_json.data.songs) || album_json.data || [];
             setAlbum(album_data);
@@ -170,7 +170,7 @@ export const PlayerProvider = ({ children }) => {
           try {
             const id = s.id || s.songid || s.enc_song_id;
             if (!id) return null;
-            const res = await fetch(`https://saavn.dev/api/songs/${id}`);
+            const res = await fetch(`https://saavn.sumit.co/api/songs/${id}`);
             const data = await res.json();
             const maybe = data && (data.data || data.song || data.songs);
             const songObj = Array.isArray(maybe) ? maybe[0] : maybe;
