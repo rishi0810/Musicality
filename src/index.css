@@ -513,10 +513,20 @@ input[type="range"]::-moz-range-thumb {
   .mobile-bottom-bar-active body {
     padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
   }
+
+  .min-h-screen {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+@media (min-width: 768px) {
+  .desktop-hide-mobile {
+    display: none !important;
+  }
 }
 
 @media (max-width: 767px) {
-  .min-h-screen {
-    padding-bottom: calc(80px + env(safe-area-inset-bottom)) !important;
+  .mobile-hide {
+    display: none !important;
   }
 }
