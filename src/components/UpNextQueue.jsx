@@ -30,20 +30,29 @@ const UpNextQueue = ({ album, setpid, formatTime, currentSong }) => {
   const filteredMore = moreByArtist.filter((s) => !album.some((a) => a.id === s.id));
 
   return (
-    <div className="text-white px-2 py-2">
-      <div className="max-h-[calc(100vh-360px)] overflow-y-auto styled-scrollbar">
-        {album.map((song) => (
-          <SongItem
-            key={song.id}
-            song={song}
-            setpid={setpid}
-            formatTime={formatTime}
-            isActive={String(song.id) === String(pid) || String(song.id) === String(currentSong.id) || (song.name && currentSong.name && String(song.name) === String(currentSong.name))}
-          />
-        ))}
+    <div className="text-black">
+        {album.length > 0 && (
+          <div className="mb-6">
+            <h3 className="font-bold text-xs uppercase tracking-wider mb-3" style={{fontFamily: 'Space Mono, monospace'}}>
+              // CURRENT QUEUE
+            </h3>
+            {album.map((song) => (
+              <SongItem
+                key={song.id}
+                song={song}
+                setpid={setpid}
+                formatTime={formatTime}
+                isActive={String(song.id) === String(pid) || String(song.id) === String(currentSong.id) || (song.name && currentSong.name && String(song.name) === String(currentSong.name))}
+              />
+            ))}
+          </div>
+        )}
 
         {filteredMore.length > 0 && (
-          <div className="mt-4">
+          <div>
+            <h3 className="font-bold text-xs uppercase tracking-wider mb-3" style={{fontFamily: 'Space Mono, monospace'}}>
+              // MORE BY ARTIST
+            </h3>
             {filteredMore.slice(0, 20).map((song) => (
               <SongItem
                 key={song.id}
@@ -55,11 +64,15 @@ const UpNextQueue = ({ album, setpid, formatTime, currentSong }) => {
             ))}
           </div>
         )}
-      </div>
+
+        {album.length === 0 && filteredMore.length === 0 && (
+          <div className="text-center py-8">
+            <div className="text-sm font-bold uppercase opacity-60">No songs in queue</div>
+          </div>
+        )}
     </div>
   );
 };
 
 export default UpNextQueue;
 
-// PropTypes removed for build cleanup

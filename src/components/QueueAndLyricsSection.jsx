@@ -12,32 +12,31 @@ const QueueAndLyricsSection = ({ album, lyrics, setpid, formatTime, currentSong 
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center gap-3 px-6 pt-4 border-b border-zinc-800/80 backdrop-blur-sm">
+      <div className="flex items-center gap-3 px-2 md:px-4 py-2 md:py-3 border-b-4 border-black bg-white flex-shrink-0">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`relative pb-3 text-sm font-medium tracking-wide transition-colors ${
-              activeTab === tab.id ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'
+            className={`relative pb-2 text-sm font-bold uppercase tracking-wider transition-colors brutal-button px-3 py-1 ${
+              activeTab === tab.id ? 'bg-yellow-300 text-black' : 'bg-white text-black hover:bg-yellow-300'
             }`}
+            style={{transform: activeTab === tab.id ? 'rotate(-1deg)' : 'rotate(1deg)'}}
           >
             {tab.label}
             {activeTab === tab.id && (
-              <span className="absolute left-0 -bottom-px h-[2px] w-full bg-sky-500 rounded-full" />
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-pink-500 border-2 border-black animate-pulse" />
             )}
           </button>
         ))}
       </div>
-  <div className="flex-grow px-4 pb-4 flex flex-col">
-        <div className="flex-1">
-          {activeTab === 'UP_NEXT' ? (
-            <UpNextQueue album={album} setpid={setpid} formatTime={formatTime} currentSong={currentSong} />
-          ) : (
-            <div className="h-full max-h-[calc(100vh-360px)] overflow-y-auto styled-scrollbar">
-              <LyricsDisplay lyrics={lyrics} />
-            </div>
-          )}
-        </div>
+      <div className="flex-1 overflow-y-auto styled-scrollbar px-1 py-1 md:px-2 md:py-2">
+        {activeTab === 'UP_NEXT' ? (
+          <UpNextQueue album={album} setpid={setpid} formatTime={formatTime} currentSong={currentSong} />
+        ) : (
+          <div className="p-2 md:p-4">
+            <LyricsDisplay lyrics={lyrics} />
+          </div>
+        )}
       </div>
     </div>
   );
@@ -45,4 +44,3 @@ const QueueAndLyricsSection = ({ album, lyrics, setpid, formatTime, currentSong 
 
 export default QueueAndLyricsSection;
 
-// PropTypes removed for build cleanup

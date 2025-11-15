@@ -1,12 +1,15 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
+import { sanitizeSongMetadata } from '../utils/sanitize';
 
 const Header = ({ setpid, render = false, setartistid, setchangealbum, setalbum }) => {
   const [searchresults, setsearchresults] = useState(false);
   const [results, setresults] = useState([]);
   const [data, setdata] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const mobileMenuRef = useRef(null);
 
   const navigate = useNavigate();
 
@@ -96,6 +99,9 @@ const Header = ({ setpid, render = false, setartistid, setchangealbum, setalbum 
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setsearchresults(false);
       }
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target)) {
+        setMobileMenuOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
@@ -108,13 +114,13 @@ const Header = ({ setpid, render = false, setartistid, setchangealbum, setalbum 
       <header className="sticky top-0 z-50">
         <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between gap-4 bg-gradient-to-b from-zinc-900/80 to-transparent backdrop-blur border-b border-zinc-800/60 rounded-b-xl">
           <div className="flex items-center gap-3">
-            <div className="relative">
+            <NavLink className="relative" to="/">
               <img src="/logo.webp" alt="logo" className="w-10 h-10 rounded-md" />
-            </div>
-            <Link to="/" className="text-lg font-medium text-white tracking-tight">Musicality</Link>
+            </NavLink>
+            <Link to="/" className="hidden md:block text-lg font-medium text-white tracking-tight">Musicality</Link>
           </div>
 
-          <div className="flex-1 max-w-xl mx-4 h-[44px] flex items-center">
+          <div className="flex-1 max-w-xl mx-2 md:mx-4 h-[44px] flex items-center">
             {render ? (
               <div className="relative w-full">
                 <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-zinc-400">
@@ -143,10 +149,19 @@ const Header = ({ setpid, render = false, setartistid, setchangealbum, setalbum 
             <a href="https://www.linkedin.com/in/rishiraj2003/" className="text-sm text-zinc-300 hover:text-white">Contact</a>
             <a href="https://github.com/rishi0810" className="text-sm text-zinc-300 hover:text-white">Github</a>
           </nav>
-          <div className="sm:hidden">
-            <button className="p-2 rounded-md bg-zinc-900/50">
+          <div className="sm:hidden relative" ref={mobileMenuRef}>
+            <button
+              className="p-2 rounded-md bg-zinc-900/50"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
               <svg className="w-5 h-5 text-zinc-300" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
             </button>
+            {mobileMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-zinc-900 rounded-lg p-2 shadow-2xl z-50">
+                <a href="https://www.linkedin.com/in/rishiraj2003/" className="block px-4 py-2 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 rounded">Contact</a>
+                <a href="https://github.com/rishi0810" className="block px-4 py-2 text-sm text-zinc-300 hover:text-white hover:bg-zinc-800 rounded">Github</a>
+              </div>
+            )}
           </div>
         </div>
 
@@ -167,8 +182,8 @@ const Header = ({ setpid, render = false, setartistid, setchangealbum, setalbum 
                     }}>
                     <img src={getBestImage(result.image)} alt={result.title} className="w-12 h-12 rounded-md" />
                     <div className="flex flex-col">
-                      <span className="text-sm text-white font-medium">{(result.title || result.name || '').replace(/&amp;/g, '&')}</span>
-                      <span className="text-xs text-zinc-400">{(result.more_info && result.more_info.primary_artists) ? result.more_info.primary_artists.replace(/&amp;/g, '&') : ''}</span>
+                      <span className="text-sm text-white font-medium">{sanitizeSongMetadata(result.title || result.name || '')}</span>
+                      <span className="text-xs text-zinc-400">{sanitizeSongMetadata((result.more_info && result.more_info.primary_artists) || '')}</span>
                     </div>
                   </li>
                 ))}
