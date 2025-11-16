@@ -15,6 +15,9 @@ export const PlayerProvider = ({ children }) => {
   const [artist, setArtist] = useState("");
   const [imgurl, setImgurl] = useState(placeholder_song_url);
   const [lyrics, setLyrics] = useState("Lyrics....");
+  const [syncedLyrics, setSyncedLyrics] = useState(null);
+  const [isLoadingLyrics, setIsLoadingLyrics] = useState(false);
+  const [currentLyricIndex, setCurrentLyricIndex] = useState(-1);
   const [artistid, setArtistid] = useState("");
 
   const [album, setAlbum] = useState([]);
@@ -132,24 +135,96 @@ export const PlayerProvider = ({ children }) => {
   }, [pid, changealbum, artistid, album]);
 
   const goToNext = useCallback(() => {
-    if (!Array.isArray(album) || album.length === 0) return;
-    const idx = album.findIndex(
-      (s) => s && (s.id === pid || s.songid === pid || s.enc_song_id === pid)
-    );
-    const nextIndex = idx === -1 ? 0 : (idx + 1) % album.length;
-    const next = album[nextIndex];
-    if (next && next.id) setPid(next.id);
-  }, [album, pid, setPid]);
+    // If we have album with songs, navigate within it
+    if (Array.isArray(album) && album.length > 0) {
+      const idx = album.findIndex(
+        (s) => s && (s.id === pid || s.songid === pid || s.enc_song_id === pid)
+      );
+      const nextIndex = idx === -1 ? 0 : (idx + 1) % album.length;
+      const next = album[nextIndex];
+      if (next && next.id) {
+        setPid(next.id);
+        return;
+      }
+    }
+
+    // Fallback: if we have an artist, try to fetch their songs and go to next
+    if (artistid) {
+      const fetchArtistSongsAndGoNext = async () => {
+        try {
+          const albumresponse = await fetch(
+            `https://saavn.sumit.co/api/artists/${artistid}/songs`
+          );
+          const album_json = await albumresponse.json();
+          const album_data =
+            (album_json && album_json.data && album_json.data.songs) ||
+            album_json.data ||
+            [];
+
+          if (Array.isArray(album_data) && album_data.length > 1) {
+            setAlbum(album_data);
+            const idx = album_data.findIndex(
+              (s) => s && (s.id === pid || s.songid === pid || s.enc_song_id === pid)
+            );
+            const nextIndex = idx === -1 ? 0 : (idx + 1) % album_data.length;
+            const next = album_data[nextIndex];
+            if (next && next.id) {
+              setPid(next.id);
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to fetch artist songs for next track", e);
+        }
+      };
+      fetchArtistSongsAndGoNext();
+    }
+  }, [album, pid, setPid, artistid]);
 
   const goToPrev = useCallback(() => {
-    if (!Array.isArray(album) || album.length === 0) return;
-    const idx = album.findIndex(
-      (s) => s && (s.id === pid || s.songid === pid || s.enc_song_id === pid)
-    );
-    const prevIndex = idx === -1 ? 0 : (idx - 1 + album.length) % album.length;
-    const prev = album[prevIndex];
-    if (prev && prev.id) setPid(prev.id);
-  }, [album, pid, setPid]);
+    // If we have album with songs, navigate within it
+    if (Array.isArray(album) && album.length > 0) {
+      const idx = album.findIndex(
+        (s) => s && (s.id === pid || s.songid === pid || s.enc_song_id === pid)
+      );
+      const prevIndex = idx === -1 ? 0 : (idx - 1 + album.length) % album.length;
+      const prev = album[prevIndex];
+      if (prev && prev.id) {
+        setPid(prev.id);
+        return;
+      }
+    }
+
+    // Fallback: if we have an artist, try to fetch their songs and go to previous
+    if (artistid) {
+      const fetchArtistSongsAndGoPrev = async () => {
+        try {
+          const albumresponse = await fetch(
+            `https://saavn.sumit.co/api/artists/${artistid}/songs`
+          );
+          const album_json = await albumresponse.json();
+          const album_data =
+            (album_json && album_json.data && album_json.data.songs) ||
+            album_json.data ||
+            [];
+
+          if (Array.isArray(album_data) && album_data.length > 1) {
+            setAlbum(album_data);
+            const idx = album_data.findIndex(
+              (s) => s && (s.id === pid || s.songid === pid || s.enc_song_id === pid)
+            );
+            const prevIndex = idx === -1 ? 0 : (idx - 1 + album_data.length) % album_data.length;
+            const prev = album_data[prevIndex];
+            if (prev && prev.id) {
+              setPid(prev.id);
+            }
+          }
+        } catch (e) {
+          console.warn("Failed to fetch artist songs for previous track", e);
+        }
+      };
+      fetchArtistSongsAndGoPrev();
+    }
+  }, [album, pid, setPid, artistid]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -186,8 +261,77 @@ export const PlayerProvider = ({ children }) => {
     };
   }, [autoNext, goToNext, setCurrentTime, setDuration, setIsPlaying]);
 
+  // Helper function to parse synced lyrics
+  const parseSyncedLyrics = (syncedLyricsText) => {
+    if (!syncedLyricsText) return [];
+
+    const lines = syncedLyricsText.split('\n');
+    const parsedLines = [];
+
+    for (const line of lines) {
+      const match = line.match(/^\[(\d{2}):(\d{2}\.\d{2})\](.*)$/);
+      if (match) {
+        const minutes = parseInt(match[1], 10);
+        const seconds = parseFloat(match[2]);
+        const timestamp = minutes * 60 + seconds;
+        const text = match[3].trim();
+
+        if (text) {
+          parsedLines.push({
+            timestamp,
+            text,
+            originalLine: line
+          });
+        }
+      }
+    }
+
+    return parsedLines.sort((a, b) => a.timestamp - b.timestamp);
+  };
+
+  // Helper function to find best lyrics match
+  const findBestLyricsMatch = (items, targetName, targetArtist) => {
+    if (!Array.isArray(items) || items.length === 0) return null;
+
+    // If only one item, return it
+    if (items.length === 1) return items[0];
+
+    // Create normalized search strings
+    const normalizedTarget = `${targetName} ${targetArtist}`.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+
+    let bestMatch = items[0];
+    let bestScore = 0;
+
+    for (const item of items) {
+      const itemString = `${item.name} ${item.artistName}`.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+
+      // Simple similarity score based on common words
+      const targetWords = normalizedTarget.split(/\s+/);
+      const itemWords = itemString.split(/\s+/);
+
+      const commonWords = targetWords.filter(word =>
+        word.length > 2 && itemWords.some(itemWord => itemWord.includes(word) || word.includes(itemWord))
+      );
+
+      const score = commonWords.length;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = item;
+      }
+    }
+
+    return bestMatch;
+  };
+
   useEffect(() => {
     const fetch_song_lyrics = async () => {
+      // Reset lyrics state when song changes
+      setLyrics("Lyrics...");
+      setSyncedLyrics(null);
+      setCurrentLyricIndex(-1);
+      setIsLoadingLyrics(true);
+
       try {
         if (artist && name) {
           const query = encodeURIComponent(`${name} ${artist}`);
@@ -195,17 +339,52 @@ export const PlayerProvider = ({ children }) => {
             `https://lrclib.net/api/search?q=${query}`
           );
           const items = response.data;
-          const best = items[0] || { plainLyrics: "No lyrics available" };
-          setLyrics(sanitizeLyrics(best.plainLyrics));
+
+          if (Array.isArray(items) && items.length > 0) {
+            // Find best match instead of just taking first item
+            const best = findBestLyricsMatch(items, name, artist);
+
+            if (best) {
+              // Set plain lyrics as fallback
+              setLyrics(sanitizeLyrics(best.plainLyrics) || "No lyrics available");
+
+              // Parse and set synced lyrics if available
+              if (best.syncedLyrics) {
+                const parsed = parseSyncedLyrics(best.syncedLyrics);
+                setSyncedLyrics(parsed);
+              }
+            }
+          } else {
+            setLyrics("No lyrics available");
+          }
         }
       } catch (err) {
         console.error("Error fetching lyrics:", err);
+        setLyrics("Error loading lyrics");
+      } finally {
+        setIsLoadingLyrics(false);
       }
     };
 
     fetch_song_lyrics();
   }, [artist, name]);
 
+  // Sync lyrics with current playback time
+  useEffect(() => {
+    if (!syncedLyrics || syncedLyrics.length === 0) return;
+
+    const findCurrentLyricIndex = () => {
+      const currentIndex = syncedLyrics.findIndex(
+        (lyric, index) => {
+          const nextLyric = syncedLyrics[index + 1];
+          return currentTime >= lyric.timestamp && (!nextLyric || currentTime < nextLyric.timestamp);
+        }
+      );
+      setCurrentLyricIndex(currentIndex);
+    };
+
+    findCurrentLyricIndex();
+  }, [currentTime, syncedLyrics]);
 
   useEffect(() => {
     let mounted = true;
@@ -278,6 +457,9 @@ export const PlayerProvider = ({ children }) => {
         artist,
         imgurl,
         lyrics,
+        syncedLyrics,
+        isLoadingLyrics,
+        currentLyricIndex,
         artistid,
         setArtistid,
         album,

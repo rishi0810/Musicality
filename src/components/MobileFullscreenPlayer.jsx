@@ -193,7 +193,7 @@ function MobileFullscreenPlayer({ onClose }) {
           {/* Volume control */}
           <div className="w-full flex flex-col items-center gap-3 max-w-xs">
             <div className="flex items-center gap-3 w-full">
-              <Volume2 className="size-5 text-black flex-shrink-0 self-center" />
+              <Volume2 className="size-6 text-black flex-shrink-0 self-start" />
               <div className="flex-1 relative">
                 <input
                   type="range"

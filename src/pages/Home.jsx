@@ -246,7 +246,7 @@ function Home() {
               </h1>
               <div className="mt-2 flex items-center gap-2">
                 <div className="w-16 h-1 bg-black border-2 border-blue-600"></div>
-                <p className="text-sm md:text-base font-bold uppercase tracking-wider">
+                <p className="hidden md:block md:text-sm md:text-base md:font-bold md:uppercase md:tracking-wider md:z-50 md:ml-[55px] ">
                   Explore brutal beats
                 </p>
               </div>
@@ -261,7 +261,7 @@ function Home() {
                 }}
               >
                 <div className="text-xs font-bold">NOW LOADING:</div>
-                <div className="text-lg font-bold">{genres.length} GENRES</div>
+                <div className="text-lg font-bold">{genres.length} LANGUAGES</div>
               </div>
             </div>
           </header>

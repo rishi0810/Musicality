@@ -7,7 +7,7 @@ const tabs = [
   { id: 'LYRICS', label: 'Lyrics' }
 ];
 
-const QueueAndLyricsSection = ({ album, lyrics, setpid, formatTime, currentSong }) => {
+const QueueAndLyricsSection = ({ album, lyrics, setpid, formatTime, currentSong, syncedLyrics, isLoadingLyrics, currentLyricIndex }) => {
   const [activeTab, setActiveTab] = useState('UP_NEXT');
 
   return (
@@ -34,7 +34,12 @@ const QueueAndLyricsSection = ({ album, lyrics, setpid, formatTime, currentSong 
           <UpNextQueue album={album} setpid={setpid} formatTime={formatTime} currentSong={currentSong} />
         ) : (
           <div className="p-2 md:p-4">
-            <LyricsDisplay lyrics={lyrics} />
+            <LyricsDisplay
+              lyrics={lyrics}
+              syncedLyrics={syncedLyrics}
+              isLoadingLyrics={isLoadingLyrics}
+              currentLyricIndex={currentLyricIndex}
+            />
           </div>
         )}
       </div>

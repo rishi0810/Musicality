@@ -10,6 +10,9 @@ const PlayerView = () => {
     artist,
     imgurl,
     lyrics,
+    syncedLyrics,
+    isLoadingLyrics,
+    currentLyricIndex,
     album,
     setPid,
     setArtistid,
@@ -110,6 +113,9 @@ const PlayerView = () => {
                 <QueueAndLyricsSection
                   album={album}
                   lyrics={lyrics}
+                  syncedLyrics={syncedLyrics}
+                  isLoadingLyrics={isLoadingLyrics}
+                  currentLyricIndex={currentLyricIndex}
                   setpid={setPid}
                   formatTime={formatTime}
                   currentSong={currentSong}
