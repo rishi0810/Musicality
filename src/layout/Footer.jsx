@@ -3,6 +3,7 @@ import { Pause, Play, SkipForward, SkipBack, Volume2 } from "lucide-react";
 import { usePlayer } from "../context/PlayerContext";
 import MobileBottomBar from "../components/MobileBottomBar";
 import MobileFullscreenPlayer from "../components/MobileFullscreenPlayer";
+import BackToSong from "../components/BackToSong";
 import { useNavigate } from "react-router-dom";
 
 function Footer() {
@@ -66,7 +67,7 @@ function Footer() {
   return (
     <>
       <footer
-        className="fixed left-1/2 bottom-4 transform -translate-x-1/2 w-10/12 max-w-4xl z-50 hidden md:flex items-center justify-center"
+        className="fixed left-1/2 bottom-4 transform -translate-x-1/2 w-10/12 max-w-5xl z-50 hidden md:flex items-center justify-center"
         style={{ paddingBottom: "env(safe-area-inset-bottom)"}
       }
       >
@@ -192,6 +193,11 @@ function Footer() {
               />
               <div className="absolute -bottom-1 right-0 w-3 h-3 bg-green-400 border-2 border-black"></div>
             </div>
+          </div>
+
+          {/* Back to Song CTA - only shows when song is playing and not on song page */}
+          <div className="relative z-10">
+            <BackToSong />
           </div>
         </div>
       </footer>

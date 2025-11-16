@@ -70,7 +70,7 @@ const PlayerView = () => {
             <div className="mt-2 flex items-center gap-2">
               <div className="w-12 h-1 bg-black border-2 border-blue-500"></div>
               <span className="text-sm font-bold uppercase tracking-wider">
-                Full Player Interface
+              La música es vida
               </span>
             </div>
           </div>
