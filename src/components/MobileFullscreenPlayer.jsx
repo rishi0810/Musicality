@@ -1,6 +1,6 @@
 import { X, Play, Pause, SkipBack, SkipForward, Volume2 } from "lucide-react";
 import { usePlayer } from "../context/PlayerContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 
 function MobileFullscreenPlayer({ onClose }) {
   const {
@@ -19,10 +19,68 @@ function MobileFullscreenPlayer({ onClose }) {
   } = usePlayer();
 
   const [localVolume, setLocalVolume] = useState(volume);
+  const [state, setState] = useState({
+    dragOffset: 0,
+    isAnimating: false
+  });
+
+  const dragRef = useRef({
+    isDragging: false,
+    startY: 0,
+    isClosing: false,
+    isOpening: false
+  });
+
+  const sheetRef = useRef(null);
+  const animationTimeoutRef = useRef(null);
+
+  const ANIMATION_DURATION = 300;
+  const CLOSE_THRESHOLD_RATIO = 0.33;
+  const MIN_CLOSE_THRESHOLD = 150;
+  const MAX_SHEET_HEIGHT = window.innerHeight * 0.9;
 
   useEffect(() => {
     setLocalVolume(volume);
   }, [volume]);
+
+  const handleMouseDown = useCallback((e) => {
+    e.preventDefault();
+    dragRef.current.isDragging = true;
+    dragRef.current.startY = e.clientY;
+  }, []);
+
+  const handleTouchStart = useCallback((e) => {
+    dragRef.current.isDragging = true;
+    dragRef.current.startY = e.touches[0].clientY;
+  }, []);
+
+  const closeWithAnimation = useCallback(() => {
+    dragRef.current.isClosing = true;
+    setState(prev => ({ ...prev, dragOffset: window.innerHeight, isAnimating: true }));
+    
+    if (animationTimeoutRef.current) clearTimeout(animationTimeoutRef.current);
+    
+    animationTimeoutRef.current = setTimeout(() => {
+      onClose();
+      dragRef.current.isClosing = false;
+      setState({ dragOffset: 0, isAnimating: false });
+    }, ANIMATION_DURATION);
+  }, [onClose, ANIMATION_DURATION]);
+
+  const handleDragEnd = useCallback(() => {
+    if (!dragRef.current.isDragging) return;
+    dragRef.current.isDragging = false;
+    
+    const sheetHeight = sheetRef.current?.offsetHeight || MAX_SHEET_HEIGHT;
+    const threshold = Math.min(MIN_CLOSE_THRESHOLD, sheetHeight * CLOSE_THRESHOLD_RATIO);
+    
+    if (state.dragOffset > threshold) {
+      closeWithAnimation();
+    } else {
+      setState(prev => ({ ...prev, dragOffset: 0 }));
+      dragRef.current.startY = 0;
+    }
+  }, [state.dragOffset, closeWithAnimation, MAX_SHEET_HEIGHT, MIN_CLOSE_THRESHOLD, CLOSE_THRESHOLD_RATIO]);
 
   const handleProgressChange = (e) => {
     const newTime = parseFloat(e.target.value);
@@ -47,9 +105,80 @@ function MobileFullscreenPlayer({ onClose }) {
     return `${minutes}:${String(seconds).padStart(2, "0")}`;
   };
 
+  // Combined effect for drag handling and scroll prevention
+  useEffect(() => {
+    const drag = dragRef.current;
+    
+    const handleMouseMove = (e) => {
+      if (!drag.isDragging) return;
+      e.preventDefault();
+      const offset = Math.max(0, e.clientY - drag.startY);
+      setState(prev => ({ ...prev, dragOffset: offset }));
+    };
+
+    const handleTouchMove = (e) => {
+      if (!drag.isDragging) return;
+      e.preventDefault();
+      const offset = Math.max(0, e.touches[0].clientY - drag.startY);
+      setState(prev => ({ ...prev, dragOffset: offset }));
+    };
+
+    const handleEnd = () => {
+      if (!drag.isDragging) return;
+      handleDragEnd();
+    };
+
+    const preventScroll = (e) => {
+      if (drag.isDragging) e.preventDefault();
+    };
+
+    // Add all listeners
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleEnd);
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    document.addEventListener('touchend', handleEnd);
+    document.addEventListener('wheel', preventScroll, { passive: false });
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleEnd);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleEnd);
+      document.removeEventListener('wheel', preventScroll);
+    };
+  }, [handleDragEnd]);
+
+  // Opening animation effect
+  useEffect(() => {
+    Object.assign(dragRef.current, { isOpening: true, isClosing: false, isDragging: false, startY: 0 });
+    setState({ dragOffset: window.innerHeight, isAnimating: true });
+    document.body.style.overflow = 'hidden';
+    
+    const openTimer = setTimeout(() => {
+      setState({ dragOffset: 0, isAnimating: true });
+      setTimeout(() => {
+        dragRef.current.isOpening = false;
+        setState(prev => ({ ...prev, isAnimating: false }));
+      }, ANIMATION_DURATION);
+    }, 10);
+    
+    return () => {
+      clearTimeout(openTimer);
+      document.body.style.overflow = 'unset';
+    };
+  }, [ANIMATION_DURATION]);
+
+  useEffect(() => {
+    return () => {
+      if (animationTimeoutRef.current) {
+        clearTimeout(animationTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {
-      onClose();
+      closeWithAnimation();
     }
   };
 
@@ -59,9 +188,31 @@ function MobileFullscreenPlayer({ onClose }) {
       onClick={handleBackdropClick}
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <div className="w-full bg-white border-t-4 border-black rounded-t-3xl max-h-[90vh] overflow-y-auto">
-        {/* Header with close button */}
-        <div className="sticky top-0 bg-white border-b-2 border-black px-4 py-3 flex justify-between items-center">
+      <div 
+        ref={sheetRef}
+        className="w-full bg-white border-t-4 border-black rounded-t-3xl max-h-[90vh] overflow-hidden flex flex-col"
+        style={{
+          transform: `translateY(${state.dragOffset}px)`,
+          transition: (dragRef.current.isDragging && !dragRef.current.isClosing && !dragRef.current.isOpening) 
+            ? 'none' 
+            : `transform ${ANIMATION_DURATION}ms ease-out`,
+        }}
+      >
+        {/* Draggable Header with close button */}
+        <div 
+          className="sticky top-0 bg-white border-b-2 border-black px-4 py-3 flex justify-between items-center"
+          onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+          style={{ 
+            cursor: dragRef.current.isDragging ? 'grabbing' : 'grab',
+          }}
+        >
+          {/* Drag pill indicator */}
+          <div 
+            className="absolute top-2 left-1/2 transform -translate-x-1/2 w-10 h-1 bg-gray-400 rounded-full"
+            style={{ pointerEvents: 'none' }}
+          />
+          
           <h2
             className="font-bold text-lg uppercase tracking-wider text-black"
             style={{ fontFamily: "Space Mono, monospace" }}
@@ -70,7 +221,7 @@ function MobileFullscreenPlayer({ onClose }) {
           </h2>
           <button
             className="brutal-button p-2 bg-white hover:bg-gray-200 border-2 border-black"
-            onClick={onClose}
+            onClick={closeWithAnimation}
             aria-label="Close player"
           >
             <X className="size-5 text-black" />
@@ -78,7 +229,7 @@ function MobileFullscreenPlayer({ onClose }) {
         </div>
 
         {/* Content */}
-        <div className="p-6 flex flex-col items-center space-y-6">
+        <div className="p-6 flex flex-col items-center space-y-6 overflow-y-auto flex-1">
           {/* Album artwork */}
           <div className="relative">
             <img
